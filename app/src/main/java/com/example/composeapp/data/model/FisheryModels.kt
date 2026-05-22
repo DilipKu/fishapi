@@ -7,7 +7,7 @@ data class Hunter(
     val id: String? = null,
     val hunter_name: String,
     val mobile_number: String,
-    val fish_category: String,
+    val fish_category: List<String>,
     val created_at: String? = null
 )
 
@@ -27,6 +27,7 @@ data class Sale(
     val fish_category: String,
     val weight: Double,
     val price: Double,
+    val remarks: String? = null,
     val created_at: String? = null
 )
 

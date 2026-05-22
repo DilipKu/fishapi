@@ -129,9 +129,9 @@ fun HomeScreen(navController: NavController, authViewModel: AuthViewModel = view
 @Composable
 fun FishBanner() {
     val banners = listOf(
-        R.drawable.rio_app_icon, // Using icon as placeholder for other banners
-        R.drawable.rio_app_icon,
-        R.drawable.rio_app_icon
+        stringResource(R.string.banner_fresh_catch),
+        stringResource(R.string.banner_daily_sales),
+        stringResource(R.string.banner_new_offers)
     )
     
     val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { banners.size })
@@ -157,35 +157,42 @@ fun FishBanner() {
             modifier = Modifier.fillMaxSize()
         ) { page ->
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                AppLogo(size = 100.dp)
-                
-                // Add some overlay text to distinguish slides
-                Text(
-                    text = if(page == 0) "Fresh Catch" else if(page == 1) "Daily Sales" else "New Offers",
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
+                AppLogo(size = 80.dp)
             }
         }
         
-        // Simple dot indicator
-        Row(
-            Modifier
-                .height(20.dp)
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter),
-            horizontalArrangement = Arrangement.Center
+        // Indicator and Text together at the bottom
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            repeat(banners.size) { iteration ->
-                val color = if (pagerState.currentPage == iteration) Color.DarkGray else Color.LightGray
-                Box(
-                    modifier = Modifier
-                        .padding(2.dp)
-                        .clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(color)
-                        .size(8.dp)
-                )
+            // Text for current page
+            Text(
+                text = banners[pagerState.currentPage],
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                fontWeight = FontWeight.Bold
+            )
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            // Dot indicator
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(banners.size) { iteration ->
+                    val color = if (pagerState.currentPage == iteration) Color.DarkGray else Color.LightGray
+                    Box(
+                        modifier = Modifier
+                            .padding(2.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(color)
+                            .size(6.dp)
+                    )
+                }
             }
         }
     }

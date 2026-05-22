@@ -116,10 +116,10 @@ class FishViewModel : ViewModel() {
         }
     }
 
-    fun addHunter(name: String, mobile: String, category: String) {
+    fun addHunter(name: String, mobile: String, categories: List<String>) {
         viewModelScope.launch {
             try {
-                val hunter = Hunter(hunter_name = name, mobile_number = mobile, fish_category = category)
+                val hunter = Hunter(hunter_name = name, mobile_number = mobile, fish_category = categories)
                 supabase.from("hunters").insert(hunter)
                 getHunters()
             } catch (e: Exception) { e.printStackTrace() }
@@ -150,6 +150,20 @@ class FishViewModel : ViewModel() {
         }
     }
 
+    fun addCatches(hunterName: String, catches: List<Pair<String, Pair<Double, Double>>>) {
+        viewModelScope.launch {
+            try {
+                val fishCatches = catches.map { (category, data) ->
+                    FishCatch(hunter_id = hunterName, fish_category = category, weight = data.first, price = data.second)
+                }
+                if (fishCatches.isNotEmpty()) {
+                    supabase.from("catch_fish").insert(fishCatches)
+                    getCatches()
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
     fun getSales() {
         viewModelScope.launch {
             try {
@@ -162,10 +176,10 @@ class FishViewModel : ViewModel() {
         }
     }
 
-    fun addSale(category: String, weight: Double, price: Double) {
+    fun addSale(category: String, weight: Double, price: Double, remarks: String? = null) {
         viewModelScope.launch {
             try {
-                val sale = Sale(fish_category = category, weight = weight, price = price)
+                val sale = Sale(fish_category = category, weight = weight, price = price, remarks = remarks)
                 supabase.from("sales").insert(sale)
                 getSales()
             } catch (e: Exception) { e.printStackTrace() }

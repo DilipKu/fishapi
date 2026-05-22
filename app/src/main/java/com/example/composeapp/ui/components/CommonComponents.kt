@@ -8,8 +8,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dilip.composeapp.R
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun AppLogo(size: androidx.compose.ui.unit.Dp) {
@@ -46,7 +49,7 @@ fun ErrorMessage(message: String) {
 fun CategoryDropdown(
     label: String,
     options: List<String>,
-    selectedOption: String,
+    selectedOption: String, // This should be the raw (English) value
     onOptionSelected: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -55,7 +58,7 @@ fun CategoryDropdown(
         onExpandedChange = { expanded = !expanded }
     ) {
         OutlinedTextField(
-            value = selectedOption,
+            value = if (selectedOption.isEmpty()) label else getTranslatedCategory(selectedOption),
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
@@ -68,7 +71,7 @@ fun CategoryDropdown(
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(option) },
+                    text = { Text(getTranslatedCategory(option)) },
                     onClick = {
                         onOptionSelected(option)
                         expanded = false
@@ -76,5 +79,38 @@ fun CategoryDropdown(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun getTranslatedCategory(category: String): String {
+    return when (category.lowercase()) {
+        "major" -> stringResource(R.string.major)
+        "minor" -> stringResource(R.string.minor)
+        "chikna" -> stringResource(R.string.chikna)
+        "tilapiya" -> stringResource(R.string.tilapiya)
+        "miscellaneous" -> stringResource(R.string.miscellaneous)
+        "fixed company" -> stringResource(R.string.fixed_company)
+        "fisherman" -> stringResource(R.string.fisherman)
+        "transport" -> stringResource(R.string.transport)
+        else -> category
+    }
+}
+
+fun formatToIST(utcString: String?): String {
+    if (utcString.isNullOrBlank()) return ""
+    return try {
+        // Supabase usually provides ISO 8601 strings
+        // We parse it and convert to IST
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+        inputFormat.timeZone = TimeZone.getTimeZone("UTC")
+        
+        val date = inputFormat.parse(utcString)
+        val outputFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
+        outputFormat.timeZone = TimeZone.getTimeZone("Asia/Kolkata")
+        
+        if (date != null) outputFormat.format(date) else utcString
+    } catch (e: Exception) {
+        utcString
     }
 }

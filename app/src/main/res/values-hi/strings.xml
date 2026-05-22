@@ -34,7 +34,23 @@
     <string name="language">भाषा</string>
     <string name="english">अंग्रेजी</string>
     <string name="hindi">हिंदी</string>
+    <string name="remarks">टिप्पणी</string>
     <string name="logout_confirm_title">लॉग आउट</string>
     <string name="logout_confirm_msg">क्या आप वाकई लॉग आउट करना चाहते हैं?</string>
     <string name="cancel">रद्द करें</string>
+    <string name="major">मेजर</string>
+    <string name="minor">माइनर</string>
+    <string name="chikna">चिकना</string>
+    <string name="tilapiya">तिलापिया</string>
+    <string name="miscellaneous">विविध</string>
+    <string name="fixed_company">फिक्स्ड कंपनी</string>
+    <string name="fisherman">मछुआरा</string>
+    <string name="transport">परिवहन</string>
+    <string name="fish_categories_title">मछली की श्रेणियाँ</string>
+    <string name="wt_label">वजन</string>
+    <string name="time_label">समय</string>
+    <string name="banner_fresh_catch">ताजा पकड़</string>
+    <string name="banner_daily_sales">दैनिक बिक्री</string>
+    <string name="banner_new_offers">नए ऑफर</string>
+    <string name="tagline">बेहतरीन मछली की सुविधा</string>
 </resources>

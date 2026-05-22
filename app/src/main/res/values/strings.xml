@@ -34,7 +34,23 @@
     <string name="language">Language</string>
     <string name="english">English</string>
     <string name="hindi">Hindi</string>
+    <string name="remarks">Remarks</string>
     <string name="logout_confirm_title">Logout</string>
     <string name="logout_confirm_msg">Are you sure you want to logout?</string>
     <string name="cancel">Cancel</string>
+    <string name="major">Major</string>
+    <string name="minor">Minor</string>
+    <string name="chikna">Chikna</string>
+    <string name="tilapiya">Tilapiya</string>
+    <string name="miscellaneous">Miscellaneous</string>
+    <string name="fixed_company">Fixed Company</string>
+    <string name="fisherman">Fisherman</string>
+    <string name="transport">Transport</string>
+    <string name="fish_categories_title">Fish Categories</string>
+    <string name="wt_label">Wt</string>
+    <string name="time_label">Time</string>
+    <string name="banner_fresh_catch">Fresh Catch</string>
+    <string name="banner_daily_sales">Daily Sales</string>
+    <string name="banner_new_offers">New Offers</string>
+    <string name="tagline">Facilitating Fine Fish</string>
 </resources>
