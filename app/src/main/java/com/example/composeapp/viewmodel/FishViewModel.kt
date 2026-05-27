@@ -5,121 +5,53 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.composeapp.data.model.*
 import com.example.composeapp.data.remote.supabase
+import com.example.composeapp.data.repository.FisheryRepository
 import io.github.jan.supabase.postgrest.from
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
 
-class FishViewModel : ViewModel() {
+class FishViewModel(private val repository: FisheryRepository) : ViewModel() {
 
-    private val _hunters = MutableStateFlow<List<Hunter>>(emptyList())
-    val hunters: StateFlow<List<Hunter>> = _hunters
+    val hunters: StateFlow<List<Hunter>> = repository.hunters
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _catches = MutableStateFlow<List<FishCatch>>(emptyList())
-    val catches: StateFlow<List<FishCatch>> = _catches
+    val catches: StateFlow<List<FishCatch>> = repository.catches
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _sales = MutableStateFlow<List<Sale>>(emptyList())
-    val sales: StateFlow<List<Sale>> = _sales
+    val sales: StateFlow<List<Sale>> = repository.sales
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _expenses = MutableStateFlow<List<Expense>>(emptyList())
-    val expenses: StateFlow<List<Expense>> = _expenses
+    val expenses: StateFlow<List<Expense>> = repository.expenses
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _fishCategories = MutableStateFlow<List<FishCategory>>(emptyList())
-    val fishCategories: StateFlow<List<FishCategory>> = _fishCategories
+    val fishCategories: StateFlow<List<FishCategory>> = repository.fishCategories
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _expenseCategories = MutableStateFlow<List<ExpenseCategory>>(emptyList())
-    val expenseCategories: StateFlow<List<ExpenseCategory>> = _expenseCategories
+    val expenseCategories: StateFlow<List<ExpenseCategory>> = repository.expenseCategories
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
     init {
-        Log.d("FishViewModel", "Init: Refreshing all data")
-        refreshAll()
-    }
-
-    fun refreshAll() {
-        getHunters()
-        getCatches()
-        getSales()
-        getExpenses()
-        getFishCategories()
-        getExpenseCategories()
-    }
-
-    fun getFishCategories() {
+        Log.d("FishViewModel", "Init: Syncing data")
         viewModelScope.launch {
-            try {
-                val list = supabase.from("fish_categories").select().decodeList<FishCategory>()
-                Log.d("FishViewModel", "Fish Categories fetched: ${list.size}")
-                
-                if (list.isEmpty()) {
-                    Log.w("FishViewModel", "fish_categories table is EMPTY. Using fallbacks.")
-                    _fishCategories.value = listOf(
-                        FishCategory(category_name = "Major", type = "fish"),
-                        FishCategory(category_name = "Minor", type = "fish"),
-                        FishCategory(category_name = "Chikna", type = "fish"),
-                        FishCategory(category_name = "Tilapiya", type = "fish"),
-                        FishCategory(category_name = "Miscellaneous", type = "fish")
-                    )
-                } else {
-                    _fishCategories.value = list
-                }
-            } catch (e: Exception) { 
-                Log.e("FishViewModel", "Error fetching fish categories", e)
-                _fishCategories.value = listOf(
-                    FishCategory(category_name = "Major", type = "fish"),
-                    FishCategory(category_name = "Minor", type = "fish"),
-                    FishCategory(category_name = "Chikna", type = "fish"),
-                    FishCategory(category_name = "Tilapiya", type = "fish"),
-                    FishCategory(category_name = "Miscellaneous", type = "fish")
-                )
-            }
+            repository.syncAll()
         }
     }
 
-    fun getExpenseCategories() {
+    fun refreshAll() {
         viewModelScope.launch {
-            try {
-                val list = supabase.from("expense_categories").select().decodeList<ExpenseCategory>()
-                Log.d("FishViewModel", "Expense Categories fetched: ${list.size}")
-                
-                if (list.isEmpty()) {
-                    Log.w("FishViewModel", "expense_categories table is EMPTY. Using fallbacks.")
-                    _expenseCategories.value = listOf(
-                        ExpenseCategory(category_name = "Fixed Company"),
-                        ExpenseCategory(category_name = "Fisherman"),
-                        ExpenseCategory(category_name = "Transport"),
-                        ExpenseCategory(category_name = "Miscellaneous")
-                    )
-                } else {
-                    _expenseCategories.value = list
-                }
-            } catch (e: Exception) { 
-                Log.e("FishViewModel", "Error fetching expense categories", e)
-                _expenseCategories.value = listOf(
-                    ExpenseCategory(category_name = "Fixed Company"),
-                    ExpenseCategory(category_name = "Fisherman"),
-                    ExpenseCategory(category_name = "Transport"),
-                    ExpenseCategory(category_name = "Miscellaneous")
-                )
-            }
+            repository.syncAll()
         }
     }
 
     fun getHunters() {
         viewModelScope.launch {
-            try {
-                val list = supabase.from("hunters")
-                    .select {
-                        order("created_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
-                    }
-                    .decodeList<Hunter>()
-                Log.d("FishViewModel", "Hunters fetched: ${list.size}")
-                _hunters.value = list
-            } catch (e: Exception) { 
-                Log.e("FishViewModel", "Error fetching hunters", e)
-            }
+            repository.fetchHunters()
         }
     }
 
@@ -133,9 +65,7 @@ class FishViewModel : ViewModel() {
                     fish_category = categories,
                     fish_rates = rates
                 )
-                supabase.from("hunters").insert(hunter)
-                kotlinx.coroutines.delay(500)
-                getHunters()
+                repository.addHunter(hunter)
             } catch (e: Exception) { 
                 Log.e("FishViewModel", "Registration failed", e)
                 _error.value = e.message ?: "Registration failed"
@@ -143,56 +73,13 @@ class FishViewModel : ViewModel() {
         }
     }
 
-    fun clearError() {
-        _error.value = null
-    }
-
-    fun getCatches() {
-        viewModelScope.launch {
-            try {
-                _catches.value = supabase.from("catch_fish")
-                    .select {
-                        order("created_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
-                    }
-                    .decodeList<FishCatch>()
-            } catch (e: Exception) { 
-                Log.e("FishViewModel", "Error fetching catches", e)
-            }
-        }
-    }
-
-    fun addCatch(hunterName: String, category: String, weight: Double, price: Double) {
-        viewModelScope.launch {
-            try {
-                val fishCatch = FishCatch(hunter_id = hunterName, fish_category = category, weight = weight, price = price)
-                supabase.from("catch_fish").insert(fishCatch)
-                getCatches()
-            } catch (e: Exception) { e.printStackTrace() }
-        }
-    }
-
     fun addCatches(hunterName: String, catches: List<Pair<String, Pair<Double, Double>>>) {
         viewModelScope.launch {
             try {
-                val fishCatches = catches.map { (category, data) ->
+                val domainCatches = catches.map { (category, data) ->
                     FishCatch(hunter_id = hunterName, fish_category = category, weight = data.first, price = data.second)
                 }
-                if (fishCatches.isNotEmpty()) {
-                    supabase.from("catch_fish").insert(fishCatches)
-                    getCatches()
-                }
-            } catch (e: Exception) { e.printStackTrace() }
-        }
-    }
-
-    fun getSales() {
-        viewModelScope.launch {
-            try {
-                _sales.value = supabase.from("sales")
-                    .select {
-                        order("created_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
-                    }
-                    .decodeList<Sale>()
+                repository.addCatches(domainCatches)
             } catch (e: Exception) { e.printStackTrace() }
         }
     }
@@ -201,20 +88,7 @@ class FishViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val sale = Sale(fish_category = category, weight = weight, price = price, remarks = remarks)
-                supabase.from("sales").insert(sale)
-                getSales()
-            } catch (e: Exception) { e.printStackTrace() }
-        }
-    }
-
-    fun getExpenses() {
-        viewModelScope.launch {
-            try {
-                _expenses.value = supabase.from("expenses")
-                    .select {
-                        order("created_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
-                    }
-                    .decodeList<Expense>()
+                repository.addSale(sale)
             } catch (e: Exception) { e.printStackTrace() }
         }
     }
@@ -223,9 +97,12 @@ class FishViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val expense = Expense(category = category, amount = amount, description = description)
-                supabase.from("expenses").insert(expense)
-                getExpenses()
+                repository.addExpense(expense)
             } catch (e: Exception) { e.printStackTrace() }
         }
+    }
+
+    fun clearError() {
+        _error.value = null
     }
 }

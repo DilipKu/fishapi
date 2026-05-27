@@ -9,7 +9,8 @@ data class Hunter(
     val mobile_number: String? = "",
     val fish_category: List<String>? = emptyList(),
     val fish_rates: Map<String, Double>? = emptyMap(),
-    val created_at: String? = null
+    val created_at: String? = null,
+    val isSynced: Boolean = true
 )
 
 @Serializable
@@ -19,7 +20,8 @@ data class FishCatch(
     val fish_category: String,
     val weight: Double,
     val price: Double,
-    val created_at: String? = null
+    val created_at: String? = null,
+    val isSynced: Boolean = true
 )
 
 @Serializable
@@ -29,7 +31,8 @@ data class Sale(
     val weight: Double,
     val price: Double,
     val remarks: String? = null,
-    val created_at: String? = null
+    val created_at: String? = null,
+    val isSynced: Boolean = true
 )
 
 @Serializable
@@ -38,7 +41,8 @@ data class Expense(
     val category: String,
     val amount: Double,
     val description: String,
-    val created_at: String? = null
+    val created_at: String? = null,
+    val isSynced: Boolean = true
 )
 
 @Serializable

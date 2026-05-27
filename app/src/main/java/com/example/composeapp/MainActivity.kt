@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.composeapp.viewmodel.AuthViewModel
 import com.example.composeapp.ui.screens.auth.LoginScreen
 import com.example.composeapp.ui.screens.auth.RegistrationScreen
@@ -21,12 +22,21 @@ import com.example.composeapp.ui.screens.features.ExpenseScreen
 import com.example.composeapp.ui.screens.home.SettingsScreen
 import com.example.composeapp.viewmodel.AuthState
 import com.dilip.composeapp.ui.theme.ComposeAppTheme
+import com.example.composeapp.data.local.AppDatabase
+import com.example.composeapp.data.repository.FisheryRepository
+import com.example.composeapp.viewmodel.FishViewModel
+import com.example.composeapp.viewmodel.factory.FisheryViewModelFactory
 
 class MainActivity : AppCompatActivity() {
     private val authViewModel: AuthViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
+        
+        // Initialize Database and Repository
+        val database = AppDatabase.getDatabase(this)
+        val repository = FisheryRepository(database.fisheryDao())
+        val factory = FisheryViewModelFactory(repository)
         
         // Ensure app opens in Hindi by default if no preference is set
         if (androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().isEmpty) {
@@ -50,14 +60,16 @@ class MainActivity : AppCompatActivity() {
                 if (authState !is AuthState.Checking) {
                     val startDestination = if (authState is AuthState.Success) "home" else "login"
                     
+                    val fishViewModel: FishViewModel = viewModel(factory = factory)
+
                     NavHost(navController = navController, startDestination = startDestination) {
                         composable("login") { LoginScreen(navController, authViewModel) }
                         composable("registration") { RegistrationScreen(navController, authViewModel) }
                         composable("home") { HomeScreen(navController, authViewModel) }
-                        composable("hunter_reg") { HunterRegistrationScreen(navController) }
-                        composable("add_catch") { AddCatchScreen(navController) }
-                        composable("sales") { SalesScreen(navController) }
-                        composable("expense") { ExpenseScreen(navController) }
+                        composable("hunter_reg") { HunterRegistrationScreen(navController, fishViewModel) }
+                        composable("add_catch") { AddCatchScreen(navController, fishViewModel) }
+                        composable("sales") { SalesScreen(navController, fishViewModel) }
+                        composable("expense") { ExpenseScreen(navController, fishViewModel) }
                         composable("settings") { SettingsScreen(navController) }
                     }
                 }

@@ -15,7 +15,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.composeapp.viewmodel.FishViewModel
 import com.example.composeapp.ui.components.CategoryDropdown
@@ -24,11 +23,13 @@ import com.example.composeapp.ui.components.getTranslatedCategory
 import com.example.composeapp.ui.components.getCategoryResId
 import com.example.composeapp.ui.components.formatToIST
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudQueue
 import com.dilip.composeapp.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HunterRegistrationScreen(navController: NavController, viewModel: FishViewModel = viewModel()) {
+fun HunterRegistrationScreen(navController: NavController, viewModel: FishViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
@@ -210,7 +211,15 @@ fun HunterList(viewModel: FishViewModel) {
         items(hunters) { hunter ->
             Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                 Column(modifier = Modifier.padding(8.dp)) {
-                    Text("${stringResource(R.string.name)}: ${hunter.hunter_name}", fontWeight = FontWeight.Bold)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("${stringResource(R.string.name)}: ${hunter.hunter_name}", fontWeight = FontWeight.Bold)
+                        Icon(
+                            imageVector = if (hunter.isSynced) Icons.Default.CloudDone else Icons.Default.CloudQueue, 
+                            contentDescription = if (hunter.isSynced) "Synced" else "Pending Sync",
+                            tint = if (hunter.isSynced) Color(0xFF4CAF50) else Color.Gray,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                     Text("${stringResource(R.string.mobile_number)}: ${hunter.mobile_number}")
 
                     val ratesText = remember(hunter.fish_rates, context) {
@@ -229,7 +238,7 @@ fun HunterList(viewModel: FishViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddCatchScreen(navController: NavController, viewModel: FishViewModel = viewModel()) {
+fun AddCatchScreen(navController: NavController, viewModel: FishViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
@@ -429,7 +438,16 @@ fun CatchList(viewModel: FishViewModel) {
                     val hunter = hunters.find { it.id == hunterId || (it.hunter_name != null && it.hunter_name == hunterId) }
                     val displayHunterName = hunter?.hunter_name ?: hunterId
                     
-                    Text("${stringResource(R.string.select_hunter)}: $displayHunterName", fontWeight = FontWeight.Bold)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("${stringResource(R.string.select_hunter)}: $displayHunterName", fontWeight = FontWeight.Bold)
+                        val allSynced = group.all { it.isSynced }
+                        Icon(
+                            imageVector = if (allSynced) Icons.Default.CloudDone else Icons.Default.CloudQueue, 
+                            contentDescription = if (allSynced) "Synced" else "Pending Sync",
+                            tint = if (allSynced) Color(0xFF4CAF50) else Color.Gray,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                     if (timestamp != null) {
                         Text("${stringResource(R.string.time_label)}: ${formatToIST(timestamp)}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                     }
@@ -449,7 +467,7 @@ fun CatchList(viewModel: FishViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SalesScreen(navController: NavController, viewModel: FishViewModel = viewModel()) {
+fun SalesScreen(navController: NavController, viewModel: FishViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
@@ -572,7 +590,15 @@ fun SalesList(viewModel: FishViewModel) {
         items(sales) { s ->
             Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                 Column(modifier = Modifier.padding(8.dp)) {
-                    Text("${stringResource(R.string.fish_category)}: ${getTranslatedCategory(s.fish_category)}", fontWeight = FontWeight.Bold)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("${stringResource(R.string.fish_category)}: ${getTranslatedCategory(s.fish_category)}", fontWeight = FontWeight.Bold)
+                        Icon(
+                            imageVector = if (s.isSynced) Icons.Default.CloudDone else Icons.Default.CloudQueue, 
+                            contentDescription = if (s.isSynced) "Synced" else "Pending Sync",
+                            tint = if (s.isSynced) Color(0xFF4CAF50) else Color.Gray,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                     if (s.created_at != null) {
                         Text("${stringResource(R.string.time_label)}: ${formatToIST(s.created_at)}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                     }
@@ -588,7 +614,7 @@ fun SalesList(viewModel: FishViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExpenseScreen(navController: NavController, viewModel: FishViewModel = viewModel()) {
+fun ExpenseScreen(navController: NavController, viewModel: FishViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
@@ -693,7 +719,15 @@ fun ExpenseList(viewModel: FishViewModel) {
         items(expenses) { e ->
             Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                 Column(modifier = Modifier.padding(8.dp)) {
-                    Text("Category: ${getTranslatedCategory(e.category)}", fontWeight = FontWeight.Bold)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Category: ${getTranslatedCategory(e.category)}", fontWeight = FontWeight.Bold)
+                        Icon(
+                            imageVector = if (e.isSynced) Icons.Default.CloudDone else Icons.Default.CloudQueue, 
+                            contentDescription = if (e.isSynced) "Synced" else "Pending Sync",
+                            tint = if (e.isSynced) Color(0xFF4CAF50) else Color.Gray,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                     if (e.created_at != null) {
                         Text("${stringResource(R.string.time_label)}: ${formatToIST(e.created_at)}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                     }
