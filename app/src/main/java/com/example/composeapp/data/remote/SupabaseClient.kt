@@ -1,12 +1,14 @@
 package com.example.composeapp.data.remote
 
+
+import com.dilip.composeapp.BuildConfig
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 
 val supabase = createSupabaseClient(
-    supabaseUrl = "https://btuxqlftsgzqwvbhdspx.supabase.co",
-    supabaseKey = "sb_publishable_zenLfEYKSEau_-V2U6wCSA_VZ57jL-Z"
+    supabaseUrl = BuildConfig.SUPABASE_URL,
+    supabaseKey = BuildConfig.SUPABASE_KEY
 ) {
     install(Postgrest)
     install(Auth)
