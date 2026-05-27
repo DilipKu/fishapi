@@ -5,7 +5,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.compose.material3.MaterialTheme
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -21,6 +20,7 @@ import com.example.composeapp.ui.screens.features.SalesScreen
 import com.example.composeapp.ui.screens.features.ExpenseScreen
 import com.example.composeapp.ui.screens.home.SettingsScreen
 import com.example.composeapp.viewmodel.AuthState
+import com.dilip.composeapp.ui.theme.ComposeAppTheme
 
 class MainActivity : AppCompatActivity() {
     private val authViewModel: AuthViewModel by viewModels()
@@ -42,7 +42,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         setContent {
-            MaterialTheme {
+            ComposeAppTheme {
                 val navController = rememberNavController()
                 val authState by authViewModel.authState.collectAsState()
                 

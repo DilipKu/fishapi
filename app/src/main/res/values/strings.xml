@@ -53,4 +53,6 @@
     <string name="banner_daily_sales">Daily Sales</string>
     <string name="banner_new_offers">New Offers</string>
     <string name="tagline">Facilitating Fine Fish</string>
+    <string name="tab_submit">Submit</string>
+    <string name="tab_view">View</string>
 </resources>
