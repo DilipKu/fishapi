@@ -84,16 +84,21 @@ fun CategoryDropdown(
 
 @Composable
 fun getTranslatedCategory(category: String): String {
+    val resId = getCategoryResId(category)
+    return if (resId != -1) stringResource(resId) else category
+}
+
+fun getCategoryResId(category: String): Int {
     return when (category.lowercase()) {
-        "major" -> stringResource(R.string.major)
-        "minor" -> stringResource(R.string.minor)
-        "chikna" -> stringResource(R.string.chikna)
-        "tilapiya" -> stringResource(R.string.tilapiya)
-        "miscellaneous" -> stringResource(R.string.miscellaneous)
-        "fixed company" -> stringResource(R.string.fixed_company)
-        "fisherman" -> stringResource(R.string.fisherman)
-        "transport" -> stringResource(R.string.transport)
-        else -> category
+        "major" -> R.string.major
+        "minor" -> R.string.minor
+        "chikna" -> R.string.chikna
+        "tilapiya" -> R.string.tilapiya
+        "miscellaneous" -> R.string.miscellaneous
+        "fixed company" -> R.string.fixed_company
+        "fisherman" -> R.string.fisherman
+        "transport" -> R.string.transport
+        else -> -1
     }
 }
 

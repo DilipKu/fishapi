@@ -30,6 +30,9 @@ class FishViewModel : ViewModel() {
     private val _expenseCategories = MutableStateFlow<List<ExpenseCategory>>(emptyList())
     val expenseCategories: StateFlow<List<ExpenseCategory>> = _expenseCategories
 
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error
+
     init {
         Log.d("FishViewModel", "Init: Refreshing all data")
         refreshAll()
@@ -107,23 +110,41 @@ class FishViewModel : ViewModel() {
     fun getHunters() {
         viewModelScope.launch {
             try {
-                _hunters.value = supabase.from("hunters")
+                val list = supabase.from("hunters")
                     .select {
                         order("created_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
                     }
                     .decodeList<Hunter>()
-            } catch (e: Exception) { e.printStackTrace() }
+                Log.d("FishViewModel", "Hunters fetched: ${list.size}")
+                _hunters.value = list
+            } catch (e: Exception) { 
+                Log.e("FishViewModel", "Error fetching hunters", e)
+            }
         }
     }
 
-    fun addHunter(name: String, mobile: String, categories: List<String>) {
+    fun addHunter(name: String, mobile: String, categories: List<String>, rates: Map<String, Double>) {
         viewModelScope.launch {
             try {
-                val hunter = Hunter(hunter_name = name, mobile_number = mobile, fish_category = categories)
+                _error.value = null
+                val hunter = Hunter(
+                    hunter_name = name, 
+                    mobile_number = mobile, 
+                    fish_category = categories,
+                    fish_rates = rates
+                )
                 supabase.from("hunters").insert(hunter)
+                kotlinx.coroutines.delay(500)
                 getHunters()
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) { 
+                Log.e("FishViewModel", "Registration failed", e)
+                _error.value = e.message ?: "Registration failed"
+            }
         }
+    }
+
+    fun clearError() {
+        _error.value = null
     }
 
     fun getCatches() {

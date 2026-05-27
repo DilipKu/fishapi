@@ -5,9 +5,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Hunter(
     val id: String? = null,
-    val hunter_name: String,
-    val mobile_number: String,
-    val fish_category: List<String>,
+    val hunter_name: String? = "",
+    val mobile_number: String? = "",
+    val fish_category: List<String>? = emptyList(),
+    val fish_rates: Map<String, Double>? = emptyMap(),
     val created_at: String? = null
 )
 

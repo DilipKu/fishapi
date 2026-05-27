@@ -8,6 +8,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -20,9 +24,13 @@ import com.dilip.composeapp.R
 
 @Composable
 fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = viewModel()) {
-    var email by remember { mutableStateOf("test@yopmail.com") }
-    var password by remember { mutableStateOf("Demo@123") }
-    var rememberMe by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val sharedPref = remember { context.getSharedPreferences("auth_prefs", android.content.Context.MODE_PRIVATE) }
+    
+    var email by remember { mutableStateOf(sharedPref.getString("remembered_email", "") ?: "") }
+    var password by remember { mutableStateOf(sharedPref.getString("remembered_password", "") ?: "") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var rememberMe by remember { mutableStateOf(sharedPref.getBoolean("remember_me", false)) }
     val authState by authViewModel.authState.collectAsState()
 
     Column(
@@ -36,17 +44,24 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = vie
         Spacer(modifier = Modifier.height(32.dp))
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = { email = it; authViewModel.resetState() },
             label = { Text(stringResource(R.string.email)) },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = { password = it; authViewModel.resetState() },
             label = { Text(stringResource(R.string.password)) },
             modifier = Modifier.fillMaxWidth(),
-            visualTransformation = PasswordVisualTransformation()
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                val description = if (passwordVisible) "Hide password" else "Show password"
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(imageVector = image, contentDescription = description)
+                }
+            }
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -55,7 +70,10 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = vie
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = rememberMe, onCheckedChange = { rememberMe = it })
-                Text(stringResource(R.string.remember_me))
+                Text(
+                    stringResource(R.string.remember_me), 
+                    modifier = Modifier.clickable { rememberMe = !rememberMe }
+                )
             }
             Text(
                 stringResource(R.string.forgot_password),
@@ -79,6 +97,18 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = vie
                 } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
                     authViewModel.setError("Please enter a valid email address")
                 } else {
+                    // Save or Clear "Remember Me" preference
+                    sharedPref.edit().apply {
+                        putBoolean("remember_me", rememberMe)
+                        if (rememberMe) {
+                            putString("remembered_email", email.trim())
+                            putString("remembered_password", password)
+                        } else {
+                            remove("remembered_email")
+                            remove("remembered_password")
+                        }
+                        apply()
+                    }
                     authViewModel.login(email.trim(), password)
                 }
             },
@@ -113,6 +143,7 @@ fun RegistrationScreen(navController: NavController, authViewModel: AuthViewMode
     var mobile by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
     val authState by authViewModel.authState.collectAsState()
 
     Column(
@@ -150,7 +181,14 @@ fun RegistrationScreen(navController: NavController, authViewModel: AuthViewMode
             onValueChange = { password = it },
             label = { Text(stringResource(R.string.password)) },
             modifier = Modifier.fillMaxWidth(),
-            visualTransformation = PasswordVisualTransformation()
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                val description = if (passwordVisible) "Hide password" else "Show password"
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(imageVector = image, contentDescription = description)
+                }
+            }
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(

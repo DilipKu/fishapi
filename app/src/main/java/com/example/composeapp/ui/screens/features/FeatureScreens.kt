@@ -21,7 +21,9 @@ import com.example.composeapp.viewmodel.FishViewModel
 import com.example.composeapp.ui.components.CategoryDropdown
 import com.example.composeapp.ui.components.ErrorMessage
 import com.example.composeapp.ui.components.getTranslatedCategory
+import com.example.composeapp.ui.components.getCategoryResId
 import com.example.composeapp.ui.components.formatToIST
+import androidx.compose.ui.platform.LocalContext
 import com.dilip.composeapp.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,8 +31,21 @@ import com.dilip.composeapp.R
 fun HunterRegistrationScreen(navController: NavController, viewModel: FishViewModel = viewModel()) {
     var name by remember { mutableStateOf("") }
     var mobile by remember { mutableStateOf("") }
-    val selectedCategories = remember { mutableStateListOf<String>() }
+    // Using a map to track which category is selected and its rate
+    val selectedCategories = remember { mutableStateMapOf<String, String>() }
+    val viewModelError by viewModel.error.collectAsState()
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    
+    // Sync local error with ViewModel error
+    LaunchedEffect(viewModelError) {
+        if (viewModelError != null) {
+            errorMessage = if (viewModelError!!.contains("duplicate key")) {
+                "Mobile number already registered"
+            } else {
+                viewModelError
+            }
+        }
+    }
 
     val hunters by viewModel.hunters.collectAsState()
     val fishCategories by viewModel.fishCategories.collectAsState()
@@ -51,98 +66,138 @@ fun HunterRegistrationScreen(navController: NavController, viewModel: FishViewMo
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
-            OutlinedTextField(
-                value = name, 
-                onValueChange = { name = it; errorMessage = null }, 
-                label = { Text(stringResource(R.string.name)) }, 
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-            OutlinedTextField(
-                value = mobile, 
-                onValueChange = { 
-                    if (it.length <= 10 && it.all { char -> char.isDigit() }) {
-                        mobile = it
-                        errorMessage = null
-                    }
-                }, 
-                label = { Text(stringResource(R.string.mobile_number)) }, 
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true
-            )
+        LazyColumn(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it; errorMessage = null; viewModel.clearError() },
+                    label = { Text(stringResource(R.string.name)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
             
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(stringResource(R.string.fish_category), style = MaterialTheme.typography.titleSmall)
-            
-            // Multiple Selection via Checkboxes (2 per row)
-            fishCategories.chunked(2).forEach { rowCategories ->
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    rowCategories.forEach { category ->
-                        val catName = category.category_name ?: "Unknown"
-                        Row(
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    if (selectedCategories.contains(catName)) {
-                                        selectedCategories.remove(catName)
-                                    } else {
-                                        selectedCategories.add(catName)
-                                    }
-                                }
-                                .padding(vertical = 2.dp)
-                        ) {
-                            Checkbox(
-                                checked = selectedCategories.contains(catName),
-                                onCheckedChange = { checked ->
-                                    if (checked) selectedCategories.add(catName) else selectedCategories.remove(catName)
-                                }
-                            )
-                            Text(getTranslatedCategory(catName), style = MaterialTheme.typography.bodyMedium)
+            item {
+                OutlinedTextField(
+                    value = mobile,
+                    onValueChange = {
+                        if (it.length <= 10 && it.all { char -> char.isDigit() }) {
+                            mobile = it
+                            errorMessage = null
+                            viewModel.clearError()
                         }
-                    }
-                    // Fill space if only one item in row
-                    if (rowCategories.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
+                    },
+                    label = { Text(stringResource(R.string.mobile_number)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+            }
+
+            item {
+                Text(stringResource(R.string.fish_category), style = MaterialTheme.typography.titleSmall)
+            }
+
+            // Multiple Selection via Checkboxes (2 per row) with Rate input
+            fishCategories.chunked(2).forEach { rowCategories ->
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        rowCategories.forEach { category ->
+                            val catName = category.category_name ?: "Unknown"
+                            val isChecked = selectedCategories.containsKey(catName)
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                                    modifier = Modifier.clickable {
+                                        if (isChecked) selectedCategories.remove(catName) else selectedCategories[catName] = ""
+                                    }
+                                ) {
+                                    Checkbox(
+                                        checked = isChecked,
+                                        onCheckedChange = { checked ->
+                                            if (checked) selectedCategories[catName] = "" else selectedCategories.remove(catName)
+                                        }
+                                    )
+                                    Text(getTranslatedCategory(catName), style = MaterialTheme.typography.bodyMedium)
+                                }
+
+                                if (isChecked) {
+                                    OutlinedTextField(
+                                        value = selectedCategories[catName] ?: "",
+                                        onValueChange = { selectedCategories[catName] = it },
+                                        label = { Text("Rate") },
+                                        modifier = Modifier
+                                            .padding(start = 32.dp, bottom = 4.dp)
+                                            .fillMaxWidth(),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                        singleLine = true,
+                                        textStyle = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        }
+                        if (rowCategories.size == 1) Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }
 
-            errorMessage?.let { ErrorMessage(it) }
+            item {
+                errorMessage?.let { ErrorMessage(it) }
 
-            Button(
-                onClick = { 
-                    if (name.isBlank() || mobile.isBlank()) {
-                        errorMessage = "All fields are required"
-                    } else if (mobile.length != 10) {
-                        errorMessage = "Please enter a valid 10-digit mobile number"
-                    } else if (selectedCategories.isEmpty()) {
-                        errorMessage = "Please select at least one category"
-                    } else {
-                        viewModel.addHunter(name, mobile, selectedCategories.toList())
-                        name = ""
-                        mobile = ""
-                        selectedCategories.clear()
-                        errorMessage = null 
-                    }
-                }, 
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-            ) {
-                Text(stringResource(R.string.register))
-            }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            Text(stringResource(R.string.registered_hunters), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            LazyColumn {
-                items(hunters) { hunter ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            Text("${stringResource(R.string.name)}: ${hunter.hunter_name}", fontWeight = FontWeight.Bold)
-                            Text("${stringResource(R.string.mobile_number)}: ${hunter.mobile_number}")
-                            val translatedCategories = hunter.fish_category.map { getTranslatedCategory(it) }
-                            Text("${stringResource(R.string.fish_category)}: ${translatedCategories.joinToString(", ")}")
+                Button(
+                    onClick = {
+                        if (name.isBlank() || mobile.isBlank()) {
+                            errorMessage = "All fields are required"
+                        } else if (mobile.length != 10) {
+                            errorMessage = "Please enter a valid 10-digit mobile number"
+                        } else if (selectedCategories.isEmpty()) {
+                            errorMessage = "Please select at least one category"
+                        } else if (selectedCategories.values.any { it.isBlank() || it.toDoubleOrNull() == null }) {
+                            errorMessage = "Please enter valid rates for all selected categories"
+                        } else {
+                            val ratesMap = selectedCategories.mapValues { it.value.toDouble() }
+                            viewModel.addHunter(name, mobile, selectedCategories.keys.toList(), ratesMap)
+                            name = ""
+                            mobile = ""
+                            selectedCategories.clear()
+                            errorMessage = null
                         }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                ) {
+                    Text(stringResource(R.string.register))
+                }
+            }
+
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Text(stringResource(R.string.registered_hunters), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            }
+
+            items(hunters) { hunter ->
+                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Text("${stringResource(R.string.name)}: ${hunter.hunter_name}", fontWeight = FontWeight.Bold)
+                        Text("${stringResource(R.string.mobile_number)}: ${hunter.mobile_number}")
+
+                        val context = LocalContext.current
+                        val ratesText = remember(hunter.fish_rates, context) {
+                            (hunter.fish_rates ?: emptyMap()).entries.joinToString(", ") { (cat, rate) ->
+                                val resId = getCategoryResId(cat)
+                                val name = if (resId != -1) context.getString(resId) else cat
+                                "$name: ₹$rate"
+                            }
+                        }
+                        Text("${stringResource(R.string.fish_category)}: $ratesText")
                     }
                 }
             }
@@ -160,9 +215,8 @@ fun AddCatchScreen(navController: NavController, viewModel: FishViewModel = view
     val hunters by viewModel.hunters.collectAsState()
     val fishCategories by viewModel.fishCategories.collectAsState()
     
-    // State to store weights and prices for each category
+    // State to store weights for each category
     val weights = remember { mutableStateMapOf<String, String>() }
-    val prices = remember { mutableStateMapOf<String, String>() }
 
     LaunchedEffect(Unit) {
         viewModel.getHunters()
@@ -194,8 +248,11 @@ fun AddCatchScreen(navController: NavController, viewModel: FishViewModel = view
                 expanded = hunterDropdownExpanded,
                 onExpandedChange = { hunterDropdownExpanded = !hunterDropdownExpanded }
             ) {
+                val hunter = hunters.find { it.id == selectedHunter }
+                val displayName = hunter?.hunter_name ?: stringResource(R.string.select_hunter)
+                
                 OutlinedTextField(
-                    value = hunters.find { it.id == selectedHunter }?.hunter_name ?: stringResource(R.string.select_hunter),
+                    value = displayName ?: "",
                     onValueChange = {},
                     readOnly = true,
                     label = { Text(stringResource(R.string.select_hunter)) },
@@ -206,11 +263,11 @@ fun AddCatchScreen(navController: NavController, viewModel: FishViewModel = view
                     expanded = hunterDropdownExpanded,
                     onDismissRequest = { hunterDropdownExpanded = false }
                 ) {
-                    hunters.forEach { hunter ->
+                    hunters.forEach { hunterItem ->
                         DropdownMenuItem(
-                            text = { Text(hunter.hunter_name) },
+                            text = { Text(hunterItem.hunter_name ?: "Unknown") },
                             onClick = {
-                                selectedHunter = hunter.id ?: ""
+                                selectedHunter = hunterItem.id ?: ""
                                 hunterDropdownExpanded = false
                             }
                         )
@@ -235,22 +292,12 @@ fun AddCatchScreen(navController: NavController, viewModel: FishViewModel = view
                             modifier = Modifier.padding(vertical = 4.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(getTranslatedCategory(catName), modifier = Modifier.weight(1.2f), style = MaterialTheme.typography.bodyMedium)
+                            Text(getTranslatedCategory(catName), modifier = Modifier.weight(1.5f), style = MaterialTheme.typography.bodyMedium)
                             
                             OutlinedTextField(
                                 value = weights[catId] ?: "",
                                 onValueChange = { if(it.length <= 8) weights[catId] = it },
                                 label = { Text(stringResource(R.string.wt_label)) },
-                                modifier = Modifier.weight(1f),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                singleLine = true,
-                                textStyle = MaterialTheme.typography.bodySmall
-                            )
-                            
-                            OutlinedTextField(
-                                value = prices[catId] ?: "",
-                                onValueChange = { if(it.length <= 8) prices[catId] = it },
-                                label = { Text(stringResource(R.string.price)) },
                                 modifier = Modifier.weight(1f),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 singleLine = true,
@@ -264,7 +311,8 @@ fun AddCatchScreen(navController: NavController, viewModel: FishViewModel = view
 
                         Button(
                             onClick = { 
-                                if (selectedHunter.isBlank()) {
+                                val hunter = hunters.find { it.id == selectedHunter }
+                                if (hunter == null) {
                                     errorMessage = "Please select a hunter"
                                     return@Button
                                 }
@@ -275,18 +323,19 @@ fun AddCatchScreen(navController: NavController, viewModel: FishViewModel = view
                                 fishCategories.forEach { category ->
                                     val catId = category.id ?: ""
                                     val wStr = weights[catId] ?: ""
-                                    val pStr = prices[catId] ?: ""
                                     
-                                    if (wStr.isNotBlank() || pStr.isNotBlank()) {
+                                    if (wStr.isNotBlank()) {
                                         val w = wStr.toDoubleOrNull()
-                                        val p = pStr.toDoubleOrNull()
+                                        // Look up the rate for this specific hunter and category
+                                        val rate = hunter.fish_rates?.get(category.category_name ?: "") ?: 0.0
                                         
                                         if (w == null || w > 99999) {
                                             validationError = "Invalid weight for ${category.category_name}"
-                                        } else if (p == null || p > 99999) {
-                                            validationError = "Invalid price for ${category.category_name}"
+                                        } else if (rate <= 0) {
+                                            validationError = "No rate set for ${category.category_name} for this hunter"
                                         } else {
-                                            batchCatches.add(category.category_name!! to (w to p))
+                                            val calculatedPrice = w * rate
+                                            batchCatches.add((category.category_name ?: "Unknown") to (w to calculatedPrice))
                                         }
                                     }
                                 }
@@ -298,7 +347,6 @@ fun AddCatchScreen(navController: NavController, viewModel: FishViewModel = view
                                 } else {
                                     viewModel.addCatches(selectedHunter, batchCatches)
                                     weights.clear()
-                                    prices.clear()
                                     errorMessage = null
                                 }
                             }, 
@@ -321,7 +369,7 @@ fun AddCatchScreen(navController: NavController, viewModel: FishViewModel = view
                         
                         Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                             Column(modifier = Modifier.padding(8.dp)) {
-                                val hunter = hunters.find { it.id == hunterId || it.hunter_name == hunterId }
+                                val hunter = hunters.find { it.id == hunterId || (it.hunter_name != null && it.hunter_name == hunterId) }
                                 val displayHunterName = hunter?.hunter_name ?: hunterId
                                 
                                 Text("${stringResource(R.string.select_hunter)}: $displayHunterName", fontWeight = FontWeight.Bold)
