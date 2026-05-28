@@ -93,10 +93,10 @@ class FishViewModel(private val repository: FisheryRepository) : ViewModel() {
         }
     }
 
-    fun addExpense(category: String, amount: Double, description: String) {
+    fun addExpense(category: String, amount: Double, description: String, hunterId: String? = null) {
         viewModelScope.launch {
             try {
-                val expense = Expense(category = category, amount = amount, description = description)
+                val expense = Expense(category = category, amount = amount, description = description, hunter_id = hunterId)
                 repository.addExpense(expense)
             } catch (e: Exception) { e.printStackTrace() }
         }

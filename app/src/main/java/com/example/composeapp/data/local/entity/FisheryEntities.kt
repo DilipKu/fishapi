@@ -43,6 +43,7 @@ data class ExpenseEntity(
     val category: String,
     val amount: Double,
     val description: String,
+    val hunter_id: String? = null,
     val created_at: String? = null,
     val isSynced: Boolean = false
 )

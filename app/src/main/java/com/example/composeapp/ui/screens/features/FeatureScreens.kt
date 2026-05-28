@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -60,7 +61,7 @@ fun HunterRegistrationScreen(navController: NavController, viewModel: FishViewMo
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             if (selectedTab == 0) {
-                HunterRegistrationForm(viewModel)
+                HunterRegistrationForm(viewModel, onSuccess = { selectedTab = 1 })
             } else {
                 HunterList(viewModel)
             }
@@ -69,7 +70,7 @@ fun HunterRegistrationScreen(navController: NavController, viewModel: FishViewMo
 }
 
 @Composable
-fun HunterRegistrationForm(viewModel: FishViewModel) {
+fun HunterRegistrationForm(viewModel: FishViewModel, onSuccess: () -> Unit) {
     var name by remember { mutableStateOf("") }
     var mobile by remember { mutableStateOf("") }
     val selectedCategories = remember { mutableStateMapOf<String, String>() }
@@ -188,6 +189,7 @@ fun HunterRegistrationForm(viewModel: FishViewModel) {
                         mobile = ""
                         selectedCategories.clear()
                         errorMessage = null
+                        onSuccess()
                     }
                 },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
@@ -269,7 +271,7 @@ fun AddCatchScreen(navController: NavController, viewModel: FishViewModel) {
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             if (selectedTab == 0) {
-                AddCatchForm(viewModel)
+                AddCatchForm(viewModel, onSuccess = { selectedTab = 1 })
             } else {
                 CatchList(viewModel)
             }
@@ -279,7 +281,7 @@ fun AddCatchScreen(navController: NavController, viewModel: FishViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddCatchForm(viewModel: FishViewModel) {
+fun AddCatchForm(viewModel: FishViewModel, onSuccess: () -> Unit) {
     var selectedHunter by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val hunters by viewModel.hunters.collectAsState()
@@ -405,6 +407,7 @@ fun AddCatchForm(viewModel: FishViewModel) {
                             viewModel.addCatches(selectedHunter, batchCatches)
                             weights.clear()
                             errorMessage = null
+                            onSuccess()
                         }
                     }, 
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
@@ -498,7 +501,7 @@ fun SalesScreen(navController: NavController, viewModel: FishViewModel) {
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             if (selectedTab == 0) {
-                SalesForm(viewModel)
+                SalesForm(viewModel, onSuccess = { selectedTab = 1 })
             } else {
                 SalesList(viewModel)
             }
@@ -507,7 +510,7 @@ fun SalesScreen(navController: NavController, viewModel: FishViewModel) {
 }
 
 @Composable
-fun SalesForm(viewModel: FishViewModel) {
+fun SalesForm(viewModel: FishViewModel, onSuccess: () -> Unit) {
     var selectedCategory by remember { mutableStateOf("") }
     var weight by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
@@ -570,6 +573,7 @@ fun SalesForm(viewModel: FishViewModel) {
                     price = ""
                     remarks = ""
                     errorMessage = null
+                    onSuccess()
                 }
             }, 
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
@@ -645,7 +649,7 @@ fun ExpenseScreen(navController: NavController, viewModel: FishViewModel) {
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             if (selectedTab == 0) {
-                ExpenseForm(viewModel)
+                ExpenseForm(viewModel, onSuccess = { selectedTab = 1 })
             } else {
                 ExpenseList(viewModel)
             }
@@ -653,22 +657,71 @@ fun ExpenseScreen(navController: NavController, viewModel: FishViewModel) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExpenseForm(viewModel: FishViewModel) {
+fun ExpenseForm(viewModel: FishViewModel, onSuccess: () -> Unit) {
     var selectedCategory by remember { mutableStateOf("") }
+    var selectedHunterId by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     
     val expenseCategories by viewModel.expenseCategories.collectAsState()
+    val hunters by viewModel.hunters.collectAsState()
     val categoryNames = expenseCategories.map { it.category_name ?: "Unknown" }
 
+    LaunchedEffect(Unit) {
+        viewModel.getHunters() // Ensure hunters are loaded for the dropdown
+    }
+
     LaunchedEffect(categoryNames) {
-        if (selectedCategory.isEmpty() && categoryNames.isNotEmpty()) selectedCategory = categoryNames.first()
+        if (selectedCategory.isEmpty() && categoryNames.isNotEmpty()) {
+            selectedCategory = categoryNames.first()
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        CategoryDropdown(stringResource(R.string.expense), categoryNames, selectedCategory) { selectedCategory = it }
+        Text(stringResource(R.string.expense), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        CategoryDropdown(stringResource(R.string.expense), categoryNames, selectedCategory) { 
+            selectedCategory = it 
+            errorMessage = null
+        }
+        
+        // Show Hunter Dropdown ONLY if Category contains "fisherman"
+        if (selectedCategory.contains("fisherman", ignoreCase = true)) {
+            Spacer(modifier = Modifier.height(12.dp))
+            var hunterExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = hunterExpanded,
+                onExpandedChange = { hunterExpanded = !hunterExpanded }
+            ) {
+                val hunter = hunters.find { it.id == selectedHunterId }
+                OutlinedTextField(
+                    value = hunter?.hunter_name ?: stringResource(R.string.select_hunter),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.select_hunter)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = hunterExpanded) },
+                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth()
+                )
+                ExposedDropdownMenu(expanded = hunterExpanded, onDismissRequest = { hunterExpanded = false }) {
+                    hunters.forEach { hunterItem ->
+                        DropdownMenuItem(
+                            text = { Text(hunterItem.hunter_name ?: "Unknown", style = MaterialTheme.typography.bodyLarge) },
+                            onClick = {
+                                selectedHunterId = hunterItem.id ?: ""
+                                hunterExpanded = false
+                                errorMessage = null
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
         
         OutlinedTextField(
             value = amount, 
@@ -678,6 +731,9 @@ fun ExpenseForm(viewModel: FishViewModel) {
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true
         )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+
         OutlinedTextField(
             value = description, 
             onValueChange = { description = it; errorMessage = null }, 
@@ -687,23 +743,36 @@ fun ExpenseForm(viewModel: FishViewModel) {
 
         errorMessage?.let { ErrorMessage(it) }
 
+        Spacer(modifier = Modifier.height(32.dp))
+
         Button(
             onClick = { 
                 val a = amount.toDoubleOrNull()
+                val isFisherman = selectedCategory.contains("fisherman", ignoreCase = true)
+                
                 if (amount.isBlank() || description.isBlank()) {
                     errorMessage = "All fields are required"
+                } else if (isFisherman && selectedHunterId.isBlank()) {
+                    errorMessage = "Please select a fisherman"
                 } else if (a == null || a > 99999) {
                     errorMessage = "Invalid amount (max 99,999)"
                 } else {
-                    viewModel.addExpense(selectedCategory, a, description)
+                    viewModel.addExpense(
+                        selectedCategory, 
+                        a, 
+                        description, 
+                        if (isFisherman) selectedHunterId else null
+                    )
                     amount = ""
                     description = ""
+                    selectedHunterId = ""
                     errorMessage = null
+                    onSuccess()
                 }
             }, 
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+            modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
-            Text(stringResource(R.string.submit_expense))
+            Text(stringResource(R.string.submit_expense), style = MaterialTheme.typography.titleMedium)
         }
     }
 }
@@ -711,28 +780,78 @@ fun ExpenseForm(viewModel: FishViewModel) {
 @Composable
 fun ExpenseList(viewModel: FishViewModel) {
     val expenses by viewModel.expenses.collectAsState()
+    val hunters by viewModel.hunters.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.getHunters()
+    }
+    
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         item {
-            Text(stringResource(R.string.expense_list), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
+            Text(stringResource(R.string.expense_list), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(12.dp))
         }
         items(expenses) { e ->
-            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                Column(modifier = Modifier.padding(8.dp)) {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Category: ${getTranslatedCategory(e.category)}", fontWeight = FontWeight.Bold)
+                        Text(
+                            text = getTranslatedCategory(e.category), 
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
                         Icon(
                             imageVector = if (e.isSynced) Icons.Default.CloudDone else Icons.Default.CloudQueue, 
                             contentDescription = if (e.isSynced) "Synced" else "Pending Sync",
                             tint = if (e.isSynced) Color(0xFF4CAF50) else Color.Gray,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
-                    if (e.created_at != null) {
-                        Text("${stringResource(R.string.time_label)}: ${formatToIST(e.created_at)}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    
+                    // PROMINENT FISHERMAN NAME
+                    // We check against both ID and potentially hunter_name if ID wasn't a UUID yet
+                    val hunter = hunters.find { it.id == e.hunter_id }
+                    if (hunter != null) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(4.dp),
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = " 👤 ${hunter.hunter_name} ", 
+                                style = MaterialTheme.typography.titleMedium, 
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
-                    Text("${stringResource(R.string.amount)}: ₹${e.amount}")
-                    Text("${stringResource(R.string.description)}: ${e.description}")
+                    
+                    if (e.created_at != null) {
+                        Text(
+                            text = "${stringResource(R.string.time_label)}: ${formatToIST(e.created_at)}", 
+                            style = MaterialTheme.typography.bodySmall, 
+                            color = Color.Gray
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "₹${e.amount}", 
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = Color(0xFFD32F2F),
+                        fontWeight = FontWeight.Black
+                    )
+                    
+                    Text(
+                        text = e.description,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
             }
         }

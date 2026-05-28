@@ -96,7 +96,7 @@ fun getCategoryResId(category: String): Int {
         "tilapiya" -> R.string.tilapiya
         "miscellaneous" -> R.string.miscellaneous
         "fixed company" -> R.string.fixed_company
-        "fisherman" -> R.string.fisherman
+        "fisherman", "fisherman expense" -> R.string.fisherman
         "transport" -> R.string.transport
         else -> -1
     }

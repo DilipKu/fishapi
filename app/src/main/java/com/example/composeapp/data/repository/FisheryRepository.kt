@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.composeapp.data.local.dao.FisheryDao
 import com.example.composeapp.data.mapper.*
 import com.example.composeapp.data.model.*
+import com.example.composeapp.data.remote.*
 import com.example.composeapp.data.remote.supabase
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
@@ -11,6 +12,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class FisheryRepository(private val fisheryDao: FisheryDao) {
+
+    init {
+        Log.d("FisheryRepository", "FisheryRepository initialized")
+    }
 
     val hunters: Flow<List<Hunter>> = fisheryDao.getAllHunters().map { list -> list.map { it.toDomain() } }
     val catches: Flow<List<FishCatch>> = fisheryDao.getAllCatches().map { list -> list.map { it.toDomain() } }
@@ -46,11 +51,11 @@ class FisheryRepository(private val fisheryDao: FisheryDao) {
 
     suspend fun refreshCategories() {
         try {
-            val fList = supabase.from("fish_categories").select().decodeList<FishCategory>()
-            if (fList.isNotEmpty()) fisheryDao.insertFishCategories(fList.map { it.toEntity() })
+            val fList = supabase.from("fish_categories").select().decodeList<FishCategoryApi>()
+            if (fList.isNotEmpty()) fisheryDao.insertFishCategories(fList.map { it.toDomain().toEntity() })
 
-            val eList = supabase.from("expense_categories").select().decodeList<ExpenseCategory>()
-            if (eList.isNotEmpty()) fisheryDao.insertExpenseCategories(eList.map { it.toEntity() })
+            val eList = supabase.from("expense_categories").select().decodeList<ExpenseCategoryApi>()
+            if (eList.isNotEmpty()) fisheryDao.insertExpenseCategories(eList.map { it.toDomain().toEntity() })
         } catch (e: Exception) {
             Log.e("FisheryRepository", "Refresh categories failed", e)
         }
@@ -60,8 +65,8 @@ class FisheryRepository(private val fisheryDao: FisheryDao) {
         try {
             val remoteHunters = supabase.from("hunters").select {
                 order("created_at", Order.DESCENDING)
-            }.decodeList<Hunter>()
-            remoteHunters.forEach { fisheryDao.insertHunter(it.toEntity(isSynced = true)) }
+            }.decodeList<HunterApi>()
+            remoteHunters.forEach { fisheryDao.insertHunter(it.toDomain(isSynced = true).toEntity(isSynced = true)) }
         } catch (e: Exception) {
             Log.e("FisheryRepository", "Fetch hunters failed", e)
         }
@@ -71,8 +76,8 @@ class FisheryRepository(private val fisheryDao: FisheryDao) {
         try {
             val remoteCatches = supabase.from("catch_fish").select {
                 order("created_at", Order.DESCENDING)
-            }.decodeList<FishCatch>()
-            remoteCatches.forEach { fisheryDao.insertCatch(it.toEntity(isSynced = true)) }
+            }.decodeList<FishCatchApi>()
+            remoteCatches.forEach { fisheryDao.insertCatch(it.toDomain(isSynced = true).toEntity(isSynced = true)) }
         } catch (e: Exception) {
             Log.e("FisheryRepository", "Fetch catches failed", e)
         }
@@ -82,8 +87,8 @@ class FisheryRepository(private val fisheryDao: FisheryDao) {
         try {
             val remoteSales = supabase.from("sales").select {
                 order("created_at", Order.DESCENDING)
-            }.decodeList<Sale>()
-            remoteSales.forEach { fisheryDao.insertSale(it.toEntity(isSynced = true)) }
+            }.decodeList<SaleApi>()
+            remoteSales.forEach { fisheryDao.insertSale(it.toDomain(isSynced = true).toEntity(isSynced = true)) }
         } catch (e: Exception) {
             Log.e("FisheryRepository", "Fetch sales failed", e)
         }
@@ -93,8 +98,8 @@ class FisheryRepository(private val fisheryDao: FisheryDao) {
         try {
             val remoteExpenses = supabase.from("expenses").select {
                 order("created_at", Order.DESCENDING)
-            }.decodeList<Expense>()
-            remoteExpenses.forEach { fisheryDao.insertExpense(it.toEntity(isSynced = true)) }
+            }.decodeList<ExpenseApi>()
+            remoteExpenses.forEach { fisheryDao.insertExpense(it.toDomain(isSynced = true).toEntity(isSynced = true)) }
         } catch (e: Exception) {
             Log.e("FisheryRepository", "Fetch expenses failed", e)
         }
@@ -103,65 +108,86 @@ class FisheryRepository(private val fisheryDao: FisheryDao) {
     // Sync Unsynced Data
     suspend fun syncHunters() {
         val unsynced = fisheryDao.getUnsyncedHunters()
+        Log.d("FisheryRepository", "Syncing hunters: ${unsynced.size} items found")
         unsynced.forEach { entity ->
             try {
-                val domain = entity.toDomain()
-                supabase.from("hunters").insert(domain)
+                val apiModel = entity.toDomain().toApi()
+                Log.d("FisheryRepository", "Attempting to sync hunter: ${apiModel.hunter_name}")
+                supabase.from("hunters").upsert(apiModel) {
+                    onConflict = "id"
+                }
                 fisheryDao.markHunterSynced(entity.id)
+                Log.d("FisheryRepository", "Hunter synced successfully: ${entity.id}")
             } catch (e: Exception) {
-                Log.e("FisheryRepository", "Sync hunter failed", e)
+                Log.e("FisheryRepository", "Sync hunter failed for ${entity.id}: ${e.message}")
             }
         }
     }
 
     suspend fun syncCatches() {
         val unsynced = fisheryDao.getUnsyncedCatches()
+        Log.d("FisheryRepository", "Syncing catches: ${unsynced.size} items found")
         unsynced.forEach { entity ->
             try {
-                val domain = entity.toDomain()
-                supabase.from("catch_fish").insert(domain)
+                val apiModel = entity.toDomain().toApi()
+                supabase.from("catch_fish").upsert(apiModel) {
+                    onConflict = "id"
+                }
                 fisheryDao.markCatchSynced(entity.id)
+                Log.d("FisheryRepository", "Catch synced successfully: ${entity.id}")
             } catch (e: Exception) {
-                Log.e("FisheryRepository", "Sync catch failed", e)
+                Log.e("FisheryRepository", "Sync catch failed: ${e.message}")
             }
         }
     }
 
     suspend fun syncSales() {
         val unsynced = fisheryDao.getUnsyncedSales()
+        Log.d("FisheryRepository", "Syncing sales: ${unsynced.size} items found")
         unsynced.forEach { entity ->
             try {
-                val domain = entity.toDomain()
-                supabase.from("sales").insert(domain)
+                val apiModel = entity.toDomain().toApi()
+                supabase.from("sales").upsert(apiModel) {
+                    onConflict = "id"
+                }
                 fisheryDao.markSaleSynced(entity.id)
+                Log.d("FisheryRepository", "Sale synced successfully: ${entity.id}")
             } catch (e: Exception) {
-                Log.e("FisheryRepository", "Sync sale failed", e)
+                Log.e("FisheryRepository", "Sync sale failed: ${e.message}")
             }
         }
     }
 
     suspend fun syncExpenses() {
         val unsynced = fisheryDao.getUnsyncedExpenses()
+        Log.d("FisheryRepository", "Syncing expenses: ${unsynced.size} items found")
         unsynced.forEach { entity ->
             try {
-                val domain = entity.toDomain()
-                supabase.from("expenses").insert(domain)
+                val apiModel = entity.toDomain().toApi()
+                supabase.from("expenses").upsert(apiModel) {
+                    onConflict = "id"
+                }
                 fisheryDao.markExpenseSynced(entity.id)
+                Log.d("FisheryRepository", "Expense synced successfully: ${entity.id}")
             } catch (e: Exception) {
-                Log.e("FisheryRepository", "Sync expense failed", e)
+                Log.e("FisheryRepository", "Sync expense failed: ${e.message}")
             }
         }
     }
 
     suspend fun syncAll() {
-        syncHunters()
-        syncCatches()
-        syncSales()
-        syncExpenses()
-        fetchHunters()
-        fetchCatches()
-        fetchSales()
-        fetchExpenses()
-        refreshCategories()
+        try {
+            syncHunters()
+            syncCatches()
+            syncSales()
+            syncExpenses()
+            fetchHunters()
+            fetchCatches()
+            fetchSales()
+            fetchExpenses()
+            refreshCategories()
+        } catch (e: Exception) {
+            Log.e("FisheryRepository", "syncAll global failure", e)
+        }
     }
 }

@@ -17,7 +17,7 @@ import com.example.composeapp.data.local.entity.*
         FishCategoryEntity::class,
         ExpenseCategoryEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
