@@ -55,4 +55,9 @@
     <string name="tagline">Facilitating Fine Fish</string>
     <string name="tab_submit">Submit</string>
     <string name="tab_view">View</string>
+    <string name="total_expense">Total Expense:</string>
+    <string name="filter_all">All</string>
+    <string name="filter_7_days">7 Days</string>
+    <string name="filter_30_days">30 Days</string>
+    <string name="filter_60_days">60 Days</string>
 </resources>

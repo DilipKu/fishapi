@@ -55,4 +55,9 @@
     <string name="tagline">बेहतरीन मछली की सुविधा</string>
     <string name="tab_submit">सबमिट करें</string>
     <string name="tab_view">देखें</string>
+    <string name="total_expense">कुल खर्च:</string>
+    <string name="filter_all">सभी</string>
+    <string name="filter_7_days">7 दिन</string>
+    <string name="filter_30_days">30 दिन</string>
+    <string name="filter_60_days">60 दिन</string>
 </resources>

@@ -10,6 +10,8 @@ import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -32,6 +34,32 @@ class FishViewModel(private val repository: FisheryRepository) : ViewModel() {
 
     val expenseCategories: StateFlow<List<ExpenseCategory>> = repository.expenseCategories
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _expenseFilterDays = MutableStateFlow<Int?>(null) // null means 'All'
+    val expenseFilterDays: StateFlow<Int?> = _expenseFilterDays
+
+    val filteredExpenses = combine(repository.expenses, _expenseFilterDays) { list, days ->
+        if (days == null) list
+        else {
+            val cutoff = java.util.Calendar.getInstance().apply {
+                add(java.util.Calendar.DAY_OF_YEAR, -days)
+            }.time
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+            sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+            
+            list.filter { 
+                val date = try { sdf.parse(it.created_at ?: "") } catch (e: Exception) { null }
+                date != null && date.after(cutoff)
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val totalExpense = filteredExpenses.map { list -> list.sumOf { it.amount } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    fun setExpenseFilter(days: Int?) {
+        _expenseFilterDays.value = days
+    }
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error

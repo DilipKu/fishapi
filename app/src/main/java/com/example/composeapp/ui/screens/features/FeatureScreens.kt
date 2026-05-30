@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -779,80 +780,132 @@ fun ExpenseForm(viewModel: FishViewModel, onSuccess: () -> Unit) {
 
 @Composable
 fun ExpenseList(viewModel: FishViewModel) {
-    val expenses by viewModel.expenses.collectAsState()
+    val expenses by viewModel.filteredExpenses.collectAsState()
+    val totalExpense by viewModel.totalExpense.collectAsState()
+    val currentFilter by viewModel.expenseFilterDays.collectAsState()
     val hunters by viewModel.hunters.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.getHunters()
     }
     
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        item {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            // Filter Options
+            Spacer(modifier = Modifier.height(16.dp))
             Text(stringResource(R.string.expense_list), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-        items(expenses) { e ->
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(
-                            text = getTranslatedCategory(e.category), 
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                        Icon(
-                            imageVector = if (e.isSynced) Icons.Default.CloudDone else Icons.Default.CloudQueue, 
-                            contentDescription = if (e.isSynced) "Synced" else "Pending Sync",
-                            tint = if (e.isSynced) Color(0xFF4CAF50) else Color.Gray,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    
-                    // PROMINENT FISHERMAN NAME
-                    // We check against both ID and potentially hunter_name if ID wasn't a UUID yet
-                    val hunter = hunters.find { it.id == e.hunter_id }
-                    if (hunter != null) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(4.dp),
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        ) {
+                val filterOptions = listOf(
+                    null to stringResource(R.string.filter_all),
+                    7 to stringResource(R.string.filter_7_days),
+                    30 to stringResource(R.string.filter_30_days),
+                    60 to stringResource(R.string.filter_60_days)
+                )
+                
+                filterOptions.forEach { (days, label) ->
+                    FilterChip(
+                        selected = currentFilter == days,
+                        onClick = { viewModel.setExpenseFilter(days) },
+                        label = { Text(label) }
+                    )
+                }
+            }
+
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(expenses) { e ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(
+                                    text = getTranslatedCategory(e.category), 
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                                Icon(
+                                    imageVector = if (e.isSynced) Icons.Default.CloudDone else Icons.Default.CloudQueue, 
+                                    contentDescription = if (e.isSynced) "Synced" else "Pending Sync",
+                                    tint = if (e.isSynced) Color(0xFF4CAF50) else Color.Gray,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            
+                            val hunter = hunters.find { it.id == e.hunter_id }
+                            if (hunter != null) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                    shape = RoundedCornerShape(4.dp),
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        text = " 👤 ${hunter.hunter_name} ", 
+                                        style = MaterialTheme.typography.titleMedium, 
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                            
+                            if (e.created_at != null) {
+                                Text(
+                                    text = "${stringResource(R.string.time_label)}: ${formatToIST(e.created_at)}", 
+                                    style = MaterialTheme.typography.bodySmall, 
+                                    color = Color.Gray
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
                             Text(
-                                text = " 👤 ${hunter.hunter_name} ", 
-                                style = MaterialTheme.typography.titleMedium, 
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                text = "₹${e.amount}", 
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = Color(0xFFD32F2F),
+                                fontWeight = FontWeight.Black
+                            )
+                            
+                            Text(
+                                text = e.description,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(top = 4.dp)
                             )
                         }
                     }
-                    
-                    if (e.created_at != null) {
-                        Text(
-                            text = "${stringResource(R.string.time_label)}: ${formatToIST(e.created_at)}", 
-                            style = MaterialTheme.typography.bodySmall, 
-                            color = Color.Gray
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Text(
-                        text = "₹${e.amount}", 
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = Color(0xFFD32F2F),
-                        fontWeight = FontWeight.Black
-                    )
-                    
-                    Text(
-                        text = e.description,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
                 }
+                // Spacer for bottom total bar
+                item { Spacer(modifier = Modifier.height(80.dp)) }
+            }
+        }
+
+        // Total Expense Bottom Bar
+        Surface(
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+            tonalElevation = 8.dp,
+            shadowElevation = 8.dp,
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.total_expense),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "₹${"%.2f".format(totalExpense)}",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color(0xFFD32F2F),
+                    fontWeight = FontWeight.Black
+                )
             }
         }
     }
